@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bản Lĩnh Người Đối Thoại - Chinh Phục 4 Chặng</title>
+  <style>
+    /* ==========================================================================
+       1. THIẾT LẬP CƠ BẢN & FONT CHỮ LỚN CHO MÀN HÌNH TƯƠNG TÁC (28px - 42px)
+       ========================================================================== */
+    :root {
+      --primary: #1d4ed8;
+      --primary-dark: #1e3a8a;
+      --accent: #f59e0b;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --text-main: #0f172a;
+      --text-sub: #334155;
+      --card-bg: rgba(255, 255, 255, 0.94);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-main);
+      background-color: #0f172a;
+    }
+
+    /* Khung bao toàn màn hình */
+    #app {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    /* Nền minh họa SVG toàn màn hình theo từng chặng */
+    #stage-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    #stage-bg svg {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Lớp phủ nhẹ giúp chữ luôn nổi bật rõ nét trên màn hình lớp học */
+    .bg-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.25) 0%, rgba(15, 23, 42, 0.45) 100%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* ==========================================================================
+       2. THANH ĐIỀU KHIỂN TRÊN CÙNG (HEADER)
+       ========================================================================== */
+    header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 3px solid #cbd5e1;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-size: clamp(22px, 2.2vw, 32px);
+      font-weight: 800;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-tool {
+      font-size: clamp(18px, 1.5vw, 24px);
+      font-weight: 700;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-tool:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-sound {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .btn-rank {
+      background: #fef3c7;
+      color: #b45309;
+    }
+
+    .btn-fullscreen {
+      background: #ede9fe;
+      color: #5b21b6;
+    }
+
+    .btn-restart {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    /* ==========================================================================
+       3. CÁC MÀN HÌNH CHÍNH (SCREENS)
+       ========================================================================== */
+    main {
+      position: relative;
+      z-index: 5;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 28px;
+      overflow: hidden;
+    }
+
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 1440px;
+      height: 100%;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.35s ease;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .glass-panel {
+      background: var(--card-bg);
+      border-radius: 28px;
+      padding: 28px 36px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.28);
+      border: 4px solid rgba(255, 255, 255, 0.95);
+      width: 100%;
+    }
+
+    /* ==========================================================================
+       4. MÀN HÌNH BẮT ĐẦU (NHẬP TÊN HỌC SINH & XEM 4 CHẶNG)
+       ========================================================================== */
+    .start-card {
+      max-width: 1280px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .main-heading {
+      font-size: clamp(32px, 3.4vw, 46px);
+      font-weight: 900;
+      color: #1e3a8a;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sub-heading {
+      font-size: clamp(22px, 2vw, 28px);
+      color: #334155;
+      font-weight: 600;
+    }
+
+    .stages-preview {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: 6px 0;
+    }
+
+    .stage-mini-card {
+      background: #f8fafc;
+      border: 3px solid #cbd5e1;
+      border-radius: 20px;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stage-mini-icon {
+      width: 78px;
+      height: 78px;
+    }
+
+    .stage-mini-title {
+      font-size: clamp(19px, 1.5vw, 23px);
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.25;
+    }
+
+    .player-input-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .player-input {
+      font-size: clamp(26px, 2.4vw, 34px);
+      padding: 14px 24px;
+      border-radius: 18px;
+      border: 3px solid #3b82f6;
+      outline: none;
+      width: min(560px, 90%);
+      font-weight: 700;
+      color: #0f172a;
+      background: #ffffff;
+    }
+
+    .player-input:focus {
+      box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-primary-big {
+      font-size: clamp(28px, 2.5vw, 36px);
+      font-weight: 900;
+      padding: 16px 36px;
+      border: none;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #1e3a8a;
+      transition: transform 0.15s;
+    }
+
+    .btn-primary-big:hover {
+      filter: brightness(1.06);
+    }
+
+    .btn-primary-big:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #1e3a8a;
+    }
+
+    /* ==========================================================================
+       5. MÀN HÌNH GIỚI THIỆU BỐI CẢNH CHẶNG (STAGE INTRO)
+       ========================================================================== */
+    .stage-intro-card {
+      max-width: 1220px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 20px;
+    }
+
+    .stage-badge-large {
+      width: 136px;
+      height: 136px;
+      animation: bounceSlow 2.2s infinite ease-in-out;
+    }
+
+    @keyframes bounceSlow {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .stage-tag {
+      font-size: clamp(22px, 1.9vw, 28px);
+      font-weight: 800;
+      padding: 8px 24px;
+      border-radius: 999px;
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .stage-story-text {
+      font-size: clamp(26px, 2.2vw, 32px);
+      line-height: 1.5;
+      color: #1e293b;
+      font-weight: 500;
+      background: #f8fafc;
+      padding: 22px 28px;
+      border-radius: 22px;
+      border-left: 8px solid #2563eb;
+      text-align: justify;
+    }
+
+    /* ==========================================================================
+       6. MÀN HÌNH CÂU HỎI CHÍNH (QUIZ SCREEN)
+       ========================================================================== */
+    .quiz-layout {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+      gap: 14px;
+    }
+
+    /* Thanh trạng thái người chơi + tiến trình 4 chặng + đồng hồ 30s */
+    .quiz-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px 24px;
+      border-radius: 22px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+      gap: 16px;
+    }
+
+    .player-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: clamp(24px, 2vw, 30px);
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .stage-mini-badge-inline {
+      width: 54px;
+      height: 54px;
+      flex-shrink: 0;
+    }
+
+    .progress-steps {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step-dot {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #475569;
+      font-size: 18px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #cbd5e1;
+    }
+
+    .step-dot.current {
+      background: #2563eb;
+      color: #fff;
+      border-color: #1e3a8a;
+      transform: scale(1.15);
+    }
+
+    .step-dot.done-correct {
+      background: #16a34a;
+      color: #fff;
+      border-color: #14532d;
+    }
+
+    .step-dot.done-wrong {
+      background: #dc2626;
+      color: #fff;
+      border-color: #7f1d1d;
+    }
+
+    .timer-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #eff6ff;
+      padding: 8px 20px;
+      border-radius: 18px;
+      border: 3px solid #3b82f6;
+    }
+
+    .timer-box.warning {
+      background: #fef2f2;
+      border-color: #dc2626;
+      animation: pulseWarn 0.6s infinite alternate;
+    }
+
+    @keyframes pulseWarn {
+      from { transform: scale(1); }
+      to { transform: scale(1.06); }
+    }
+
+    .timer-value {
+      font-size: clamp(30px, 2.8vw, 40px);
+      font-weight: 900;
+      color: #1d4ed8;
+      min-width: 72px;
+      text-align: center;
+    }
+
+    .timer-box.warning .timer-value {
+      color: #dc2626;
+    }
+
+    /* Hộp câu hỏi */
+    .question-box {
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 24px;
+      padding: 20px 30px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+      border: 4px solid #ffffff;
+      flex: 0 0 auto;
+    }
+
+    .question-meta {
+      font-size: clamp(20px, 1.7vw, 25px);
+      font-weight: 800;
+      color: #2563eb;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .question-text {
+      font-size: clamp(28px, 2.5vw, 36px);
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.35;
+    }
+
+    /* Lưới 4 đáp án A, B, C, D */
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .option-btn {
+      background: rgba(255, 255, 255, 0.96);
+      border: 4px solid #cbd5e1;
+      border-radius: 22px;
+      padding: 16px 22px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      text-align: left;
+      transition: transform 0.15s, border-color 0.2s, background 0.2s;
+      box-shadow: 0 6px 0 #94a3b8;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      border-color: #2563eb;
+      background: #eff6ff;
+      transform: translateY(-2px);
+    }
+
+    .option-btn:disabled {
+      cursor: default;
+    }
+
+    .option-letter {
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 30px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .option-content {
+      font-size: clamp(26px, 2.2vw, 32px);
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.3;
+    }
+
+    .option-btn.correct {
+      background: #dcfce7 !important;
+      border-color: #16a34a !important;
+      box-shadow: 0 6px 0 #15803d !important;
+    }
+
+    .option-btn.correct .option-letter {
+      background: #16a34a;
+    }
+
+    .option-btn.wrong {
+      background: #fee2e2 !important;
+      border-color: #dc2626 !important;
+      box-shadow: 0 6px 0 #991b1b !important;
+    }
+
+    .option-btn.wrong .option-letter {
+      background: #dc2626;
+    }
+
+    /* Thanh phản hồi & nút tiếp theo */
+    .feedback-bar {
+      min-height: 76px;
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 20px;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      visibility: hidden;
+    }
+
+    .feedback-bar.show {
+      visibility: visible;
+    }
+
+    .feedback-text {
+      font-size: clamp(24px, 2vw, 29px);
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.3;
+    }
+
+    .btn-next {
+      font-size: clamp(24px, 2.1vw, 30px);
+      font-weight: 900;
+      padding: 12px 28px;
+      border-radius: 16px;
+      border: none;
+      background: #16a34a;
+      color: #ffffff;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 5px 0 #14532d;
+    }
+
+    /* ==========================================================================
+       7. MÀN HÌNH VINH DANH & BẢNG XẾP HẠNG (LEADERBOARD)
+       ========================================================================== */
+    .result-card {
+      max-width: 1320px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      max-height: 92vh;
+    }
+
+    .result-summary-banner {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 3px solid #f59e0b;
+      border-radius: 22px;
+      padding: 16px 26px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .result-summary-banner h2 {
+      font-size: clamp(28px, 2.6vw, 38px);
+      color: #92400e;
+      font-weight: 900;
+    }
+
+    .result-stats {
+      font-size: clamp(24px, 2.1vw, 30px);
+      font-weight: 800;
+      color: #1e3a8a;
+    }
+
+    .leaderboard-wrap {
+      flex: 1;
+      overflow-y: auto;
+      border-radius: 18px;
+      border: 3px solid #cbd5e1;
+      background: #ffffff;
+    }
+
+    table.leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    table.leaderboard-table th {
+      background: #1e3a8a;
+      color: #ffffff;
+      font-size: clamp(22px, 1.9vw, 28px);
+      padding: 14px 20px;
+      position: sticky;
+      top: 0;
+    }
+
+    table.leaderboard-table td {
+      font-size: clamp(24px, 2vw, 30px);
+      padding: 14px 20px;
+      border-bottom: 2px solid #e2e8f0;
+      font-weight: 700;
+    }
+
+    table.leaderboard-table tr.top-1 {
+      background: #fef9c3;
+    }
+
+    table.leaderboard-table tr.top-2 {
+      background: #f1f5f9;
+    }
+
+    table.leaderboard-table tr.top-3 {
+      background: #ffedd5;
+    }
+
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 52px;
+      height: 46px;
+      padding: 0 12px;
+      border-radius: 12px;
+      font-weight: 900;
+    }
+
+    .rank-1 { background: #facc15; color: #713f12; }
+    .rank-2 { background: #cbd5e1; color: #1e293b; }
+    .rank-3 { background: #fb923c; color: #7c2d12; }
+    .rank-other { background: #e2e8f0; color: #334155; }
+
+    .result-actions {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    /* Hộp thông báo xác nhận tùy chỉnh (thay thế confirm/alert) */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #ffffff;
+      border-radius: 26px;
+      padding: 32px;
+      max-width: 680px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.35);
+      border: 4px solid #3b82f6;
+    }
+
+    .modal-box h3 {
+      font-size: 34px;
+      color: #1e3a8a;
+      margin-bottom: 14px;
+    }
+
+    .modal-box p {
+      font-size: 28px;
+      color: #334155;
+      margin-bottom: 24px;
+      line-height: 1.4;
+    }
+
+    .modal-btns {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    @media (max-width: 960px) {
+      .stages-preview { grid-template-columns: repeat(2, 1fr); }
+      .options-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <!-- NỀN MINH HỌA SVG TỰ ĐỘNG THAY ĐỔI THEO TỪNG CHẶNG -->
+  <div id="stage-bg"></div>
+  <div class="bg-overlay"></div>
+
+  <!-- THANH TIÊU ĐỀ & CÔNG CỤ -->
+  <header>
+    <div class="brand-title">
+      <span>🎯</span>
+      <span>BẢN LĨNH NGƯỜI ĐỐI THOẠI – 4 CHẶNG</span>
+    </div>
+    <div class="header-controls">
+      <button class="btn-tool btn-sound" id="btn-sound" onclick="toggleSound()" title="Bật/Tắt âm thanh">
+        🔊 Âm thanh
+      </button>
+      <button class="btn-tool btn-rank" onclick="openLeaderboardOnly()" title="Xem Bảng Vinh Danh">
+        🏆 Vinh danh (<span id="saved-count">0</span>)
+      </button>
+      <button class="btn-tool btn-fullscreen" onclick="toggleFullScreen()" title="Toàn màn hình">
+        ⛶ Toàn màn hình
+      </button>
+      <button class="btn-tool btn-restart" onclick="askRestart()" title="Chơi lại từ đầu">
+        🔄 Chơi lại
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ======================================================================
+         MÀN HÌNH 1: CHÀO MỪNG & NHẬP TÊN HỌC SINH THAM GIA
+         ====================================================================== -->
+    <section id="screen-start" class="screen active">
+      <div class="glass-panel start-card">
+        <h1 class="main-heading">BẢN LĨNH NGƯỜI ĐỐI THOẠI: CHINH PHỤC 4 CHẶNG</h1>
+        <p class="sub-heading">Thảo luận nhóm về một vấn đề trong đời sống • 12 câu hỏi • 30 giây / câu</p>
+
+        <!-- Xem trước 4 chặng đường và 4 biểu tượng -->
+        <div class="stages-preview" id="stages-preview-container"></div>
+
+        <!-- Ô nhập tên học sinh -->
+        <div class="player-input-row">
+          <input type="text" id="player-name-input" class="player-input" placeholder="Nhập họ tên học sinh lượt này..." maxlength="40" autocomplete="off">
+          <button class="btn-primary-big" onclick="startPlayerJourney()">🚀 BẮT ĐẦU CHƠI</button>
+        </div>
+        <p id="input-warning" style="font-size: 24px; color: #dc2626; font-weight: 700; min-height: 32px;"></p>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         MÀN HÌNH 2: BỐI CẢNH DẪN DẮT TỪNG CHẶNG
+         ====================================================================== -->
+    <section id="screen-stage-intro" class="screen">
+      <div class="glass-panel stage-intro-card">
+        <div class="stage-tag" id="intro-stage-tag">CHẶNG 1 / 4</div>
+        <div class="stage-badge-large" id="intro-stage-icon"></div>
+        <h2 class="main-heading" id="intro-stage-name">KHỞI HÀNH & PHÂN VAI</h2>
+        <p class="stage-story-text" id="intro-stage-desc"></p>
+        <button class="btn-primary-big" onclick="beginStageQuestions()">▶ VÀO THỬ THÁCH CHẶNG NÀY</button>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         MÀN HÌNH 3: CÂU HỎI TƯƠNG TÁC & ĐỒNG HỒ ĐẾM NGƯỢC 30 GIÂY
+         ====================================================================== -->
+    <section id="screen-quiz" class="screen">
+      <div class="quiz-layout" style="width: 100%;">
+        <!-- Thanh thông tin trên -->
+        <div class="quiz-top-bar">
+          <div class="player-pill">
+            <div class="stage-mini-badge-inline" id="quiz-stage-icon"></div>
+            <div>
+              <div style="font-size: 20px; color: #475569;" id="quiz-stage-label">Chặng 1</div>
+              <div>👤 <span id="quiz-player-name">Học sinh</span> • Đúng: <span id="quiz-score-now" style="color:#16a34a;">0</span>/12</div>
+            </div>
+          </div>
+
+          <!-- 12 ô tiến trình -->
+          <div class="progress-steps" id="progress-steps"></div>
+
+          <!-- Đồng hồ 30 giây -->
+          <div class="timer-box" id="timer-box">
+            <span style="font-size: 32px;">⏱️</span>
+            <span class="timer-value" id="timer-display">30s</span>
+          </div>
+        </div>
+
+        <!-- Hộp câu hỏi -->
+        <div class="question-box">
+          <div class="question-meta">
+            <span id="question-number-label">Câu 1 / 12</span>
+            <span id="total-elapsed-label">Tổng thời gian: 00 phút 00 giây</span>
+          </div>
+          <div class="question-text" id="question-text">Nội dung câu hỏi...</div>
+        </div>
+
+        <!-- 4 lựa chọn A, B, C, D -->
+        <div class="options-grid" id="options-grid"></div>
+
+        <!-- Thanh giải thích & nút đi tiếp -->
+        <div class="feedback-bar" id="feedback-bar">
+          <div class="feedback-text" id="feedback-text"></div>
+          <button class="btn-next" id="btn-next-q" onclick="nextStep()">Tiếp tục ➔</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         MÀN HÌNH 4: VINH DANH XẾP HẠNG 1, 2, 3...
+         ====================================================================== -->
+    <section id="screen-result" class="screen">
+      <div class="glass-panel result-card">
+        <div class="result-summary-banner" id="current-result-banner">
+          <h2 id="finish-headline">🎉 CHÚC MỪNG HOÀN THÀNH 4 CHẶNG!</h2>
+          <div class="result-stats" id="finish-stats">Đúng: 12/12 • Thời gian: 01 phút 25 giây</div>
+        </div>
+
+        <h3 style="font-size: 32px; color: #1e3a8a; font-weight: 900; text-align: center;">
+          🏆 BẢNG VÀNG VINH DANH (Xếp theo Số câu đúng & Tổng phút chơi nhanh nhất)
+        </h3>
+
+        <div class="leaderboard-wrap">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th style="width: 130px;">Hạng</th>
+                <th>Họ và tên học sinh</th>
+                <th style="width: 210px;">Số câu đúng</th>
+                <th style="width: 280px;">Tổng thời gian chơi</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+          </table>
+        </div>
+
+        <div class="result-actions">
+          <button class="btn-primary-big" onclick="nextStudentTurn()">➕ LƯỢT HỌC SINH TIẾP THEO</button>
+          <button class="btn-tool btn-restart" style="font-size: 28px; padding: 16px 28px;" onclick="askClearLeaderboard()">🗑️ Xóa bảng điểm & Chơi lại mới</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- HỘP THOẠI XÁC NHẬN TÙY CHỈNH -->
+<div class="modal-backdrop" id="custom-modal">
+  <div class="modal-box">
+    <h3 id="modal-title">Xác nhận</h3>
+    <p id="modal-message">Bạn có chắc chắn muốn thực hiện thao tác này?</p>
+    <div class="modal-btns">
+      <button class="btn-tool" style="background:#e2e8f0; color:#1e293b; font-size: 26px; padding: 12px 26px;" onclick="closeModal()">Hủy bỏ</button>
+      <button class="btn-tool" id="modal-confirm-btn" style="background:#dc2626; color:#ffffff; font-size: 26px; padding: 12px 26px;">Đồng ý</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ==========================================================================
+     1. HỆ THỐNG ÂM THANH NỘI BỘ (WEB AUDIO API - CHẠY OFFLINE 100%)
+     ========================================================================== */
+  let soundEnabled = true;
+  let audioCtx = null;
+
+  function initAudio() {
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) audioCtx = new AudioContext();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  function playTone(freq, type, duration, delay = 0, vol = 0.2) {
+    if (!soundEnabled) return;
+    initAudio();
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + duration);
+  }
+
+  const SFX = {
+    click: () => playTone(520, 'sine', 0.08, 0, 0.15),
+    tick: () => playTone(880, 'triangle', 0.05, 0, 0.08),
+    warnTick: () => playTone(1046, 'sawtooth', 0.09, 0, 0.14),
+    correct: () => {
+      playTone(523.25, 'sine', 0.14, 0, 0.22);
+      playTone(659.25, 'sine', 0.14, 0.11, 0.22);
+      playTone(783.99, 'sine', 0.28, 0.22, 0.25);
+    },
+    wrong: () => {
+      playTone(310, 'sawtooth', 0.18, 0, 0.18);
+      playTone(230, 'sawtooth', 0.3, 0.16, 0.18);
+    },
+    stageUp: () => {
+      playTone(440, 'triangle', 0.12, 0, 0.2);
+      playTone(554.37, 'triangle', 0.12, 0.1, 0.2);
+      playTone(659.25, 'triangle', 0.12, 0.2, 0.2);
+      playTone(880, 'triangle', 0.35, 0.3, 0.24);
+    },
+    victory: () => {
+      const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+      const times = [0, 0.12, 0.24, 0.36, 0.52, 0.66];
+      notes.forEach((n, i) => playTone(n, 'triangle', 0.28, times[i], 0.24));
+    }
+  };
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('btn-sound');
+    btn.innerHTML = soundEnabled ? '🔊 Âm thanh' : '🔇 Đã tắt tiếng';
+    if (soundEnabled) SFX.click();
+  }
+
+  /* ==========================================================================
+     2. ĐỒ HỌA SVG BỐI CẢNH & BIỂU TƯỢNG 4 CHẶNG (NHÚNG NỘI BỘ OFFLINE)
+     ========================================================================== */
+  const STAGE_ICONS_SVG = [
+    // Biểu tượng Chặng 1: Khởi Hành & Phân Vai (4 thẻ vai trò + sổ kế hoạch)
+    `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="60" cy="60" r="56" fill="#fef3c7" stroke="#f59e0b" stroke-width="6"/>
+      <rect x="24" y="34" width="22" height="32" rx="4" transform="rotate(-12 35 50)" fill="#3b82f6" stroke="#1e3a8a" stroke-width="2.5"/>
+      <rect x="42" y="28" width="22" height="32" rx="4" transform="rotate(-4 53 44)" fill="#10b981" stroke="#065f46" stroke-width="2.5"/>
+      <rect x="60" y="29" width="22" height="32" rx="4" transform="rotate(6 71 45)" fill="#f97316" stroke="#9a3412" stroke-width="2.5"/>
+      <rect x="76" y="35" width="22" height="32" rx="4" transform="rotate(14 87 51)" fill="#ef4444" stroke="#991b1b" stroke-width="2.5"/>
+      <rect x="30" y="60" width="60" height="34" rx="5" fill="#ffffff" stroke="#1e293b" stroke-width="3"/>
+      <line x1="60" y1="60" x2="60" y2="94" stroke="#1e293b" stroke-width="3"/>
+      <line x1="36" y1="70" x2="54" y2="70" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
+      <line x1="36" y1="79" x2="52" y2="79" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
+      <line x1="66" y1="70" x2="84" y2="70" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
+      <line x1="66" y1="79" x2="80" y2="79" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
+    </svg>`,
+
+    // Biểu tượng Chặng 2: Lắng Nghe & Chuẩn Bị Dẫn Chứng (La bàn + lá rừng + sóng âm lắng nghe)
+    `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="60" cy="60" r="56" fill="#dcfce7" stroke="#16a34a" stroke-width="6"/>
+      <circle cx="56" cy="66" r="28" fill="#fef08a" stroke="#ca8a04" stroke-width="4"/>
+      <polygon points="56,45 63,66 56,87 49,66" fill="#ef4444"/>
+      <polygon points="56,66 63,66 56,87 49,66" fill="#334155"/>
+      <circle cx="56" cy="66" r="4" fill="#ffffff"/>
+      <path d="M24 72 C18 54, 30 42, 40 50 C34 62, 30 70, 24 72 Z" fill="#22c55e" stroke="#14532d" stroke-width="2.5"/>
+      <rect x="54" y="20" width="44" height="30" rx="12" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/>
+      <path d="M68 35 Q72 28 76 35 T84 35" fill="none" stroke="#0284c7" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="88" cy="35" r="3" fill="#16a34a"/>
+    </svg>`,
+
+    // Biểu tượng Chặng 3: Công Dân Số & Văn Hóa Mạng (Máy tính bảng infographic + khiên xác thực)
+    `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="60" cy="60" r="56" fill="#dbeafe" stroke="#2563eb" stroke-width="6"/>
+      <rect x="28" y="26" width="52" height="68" rx="8" fill="#1e293b" stroke="#0f172a" stroke-width="3"/>
+      <rect x="33" y="32" width="42" height="54" rx="4" fill="#ffffff"/>
+      <rect x="38" y="56" width="7" height="22" fill="#3b82f6"/>
+      <rect x="49" y="48" width="7" height="30" fill="#10b981"/>
+      <rect x="60" y="42" width="7" height="36" fill="#f59e0b"/>
+      <circle cx="48" cy="42" r="5" fill="#ec4899"/>
+      <path d="M78 52 L98 60 L98 76 C98 88 88 96 78 100 C68 96 58 88 58 76 L58 60 Z" fill="#facc15" stroke="#854d0e" stroke-width="3"/>
+      <polyline points="70,76 76,83 88,69" fill="none" stroke="#15803d" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+
+    // Biểu tượng Chặng 4: Bản Lĩnh Đối Thoại & Lan Tỏa (Micro sân khấu + bong bóng đối thoại + hào quang)
+    `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="60" cy="60" r="56" fill="#ffedd5" stroke="#ea580c" stroke-width="6"/>
+      <polygon points="60,12 64,22 75,22 66,28 69,38 60,32 51,38 54,28 45,22 56,22" fill="#facc15" stroke="#b45309" stroke-width="2"/>
+      <rect x="52" y="38" width="16" height="28" rx="8" fill="#475569" stroke="#0f172a" stroke-width="3"/>
+      <line x1="52" y1="50" x2="68" y2="50" stroke="#cbd5e1" stroke-width="2.5"/>
+      <path d="M45 56 C45 72, 75 72, 75 56" fill="none" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round"/>
+      <line x1="60" y1="68" x2="60" y2="86" stroke="#0f172a" stroke-width="4"/>
+      <rect x="44" y="86" width="32" height="8" rx="4" fill="#b45309"/>
+      <rect x="20" y="42" width="24" height="18" rx="8" fill="#ffffff" stroke="#2563eb" stroke-width="2.5"/>
+      <rect x="76" y="42" width="24" height="18" rx="8" fill="#ffffff" stroke="#16a34a" stroke-width="2.5"/>
+    </svg>`
+  ];
+
+  const STAGE_BACKGROUNDS_SVG = [
+    // Nền Chặng 1: Lớp học sáng sủa ấm áp
+    `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1600" height="900" fill="#fef9c3"/>
+      <rect x="0" y="620" width="1600" height="280" fill="#fde68a"/>
+      <rect x="380" y="130" width="840" height="360" rx="18" fill="#14532d" stroke="#92400e" stroke-width="20"/>
+      <rect x="410" y="160" width="780" height="300" fill="#166534"/>
+      <rect x="110" y="160" width="190" height="300" rx="10" fill="#bae6fd" stroke="#92400e" stroke-width="12"/>
+      <rect x="1300" y="160" width="190" height="300" rx="10" fill="#bae6fd" stroke="#92400e" stroke-width="12"/>
+      <circle cx="1410" cy="230" r="35" fill="#fde047"/>
+      <path d="M1300 410 Q1390 360 1490 420 L1490 460 L1300 460 Z" fill="#4ade80"/>
+      <rect x="220" y="660" width="320" height="150" rx="14" fill="#d97706" stroke="#78350f" stroke-width="8"/>
+      <rect x="640" y="660" width="320" height="150" rx="14" fill="#d97706" stroke="#78350f" stroke-width="8"/>
+      <rect x="1060" y="660" width="320" height="150" rx="14" fill="#d97706" stroke="#78350f" stroke-width="8"/>
+    </svg>`,
+
+    // Nền Chặng 2: Rừng ngập mặn Cần Giờ & cầu gỗ
+    `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sky2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#dcfce7"/>
+          <stop offset="100%" stop-color="#fef9c3"/>
+        </linearGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#sky2)"/>
+      <path d="M0 540 Q400 500 800 540 T1600 520 L1600 900 L0 900 Z" fill="#67e8f9"/>
+      <path d="M0 640 Q500 600 1000 650 T1600 630 L1600 900 L0 900 Z" fill="#22d3ee"/>
+      <circle cx="220" cy="300" r="190" fill="#15803d"/>
+      <circle cx="380" cy="340" r="160" fill="#16a34a"/>
+      <circle cx="1360" cy="290" r="200" fill="#15803d"/>
+      <circle cx="1180" cy="350" r="150" fill="#16a34a"/>
+      <rect x="240" y="450" width="36" height="230" fill="#713f12"/>
+      <rect x="1320" y="440" width="40" height="240" fill="#713f12"/>
+      <path d="M350 900 C480 730, 1080 720, 1260 560 L1350 570 C1180 750, 620 770, 520 900 Z" fill="#b45309" stroke="#78350f" stroke-width="6"/>
+    </svg>`,
+
+    // Nền Chặng 3: Bờ biển Vũng Tàu & hải đăng
+    `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sky3" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#7dd3fc"/>
+          <stop offset="100%" stop-color="#e0f2fe"/>
+        </linearGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#sky3)"/>
+      <circle cx="1320" cy="170" r="75" fill="#fde047"/>
+      <path d="M0 470 L1600 470 L1600 900 L0 900 Z" fill="#0284c7"/>
+      <path d="M0 560 Q450 510 900 570 T1600 550 L1600 900 L0 900 Z" fill="#38bdf8"/>
+      <path d="M0 680 Q550 610 1100 710 L1600 740 L1600 900 L0 900 Z" fill="#fde68a"/>
+      <path d="M120 470 Q320 330 520 470 Z" fill="#22c55e"/>
+      <rect x="305" y="250" width="30" height="120" fill="#ffffff" stroke="#dc2626" stroke-width="4"/>
+      <rect x="305" y="280" width="30" height="25" fill="#dc2626"/>
+      <rect x="305" y="330" width="30" height="25" fill="#dc2626"/>
+      <polygon points="298,250 342,250 320,225" fill="#dc2626"/>
+    </svg>`,
+
+    // Nền Chặng 4: Sân khấu diễn đàn hướng biển
+    `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sky4" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#fed7aa"/>
+          <stop offset="55%" stop-color="#fef08a"/>
+          <stop offset="100%" stop-color="#bae6fd"/>
+        </linearGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#sky4)"/>
+      <circle cx="800" cy="360" r="140" fill="#fde047" opacity="0.85"/>
+      <rect x="0" y="460" width="1600" height="240" fill="#0ea5e9"/>
+      <path d="M0 640 L1600 640 L1600 900 L0 900 Z" fill="#f1f5f9"/>
+      <rect x="0" y="620" width="1600" height="26" fill="#cbd5e1"/>
+      <rect x="180" y="540" width="140" height="180" rx="10" fill="#b45309" stroke="#78350f" stroke-width="6"/>
+      <rect x="1150" y="380" width="310" height="210" rx="14" fill="#ffffff" stroke="#1e3a8a" stroke-width="10"/>
+      <circle cx="1250" cy="485" r="48" fill="#3b82f6"/>
+      <rect x="1330" y="440" width="90" height="22" rx="6" fill="#10b981"/>
+      <rect x="1330" y="475" width="90" height="22" rx="6" fill="#f59e0b"/>
+      <rect x="1330" y="510" width="90" height="22" rx="6" fill="#ef4444"/>
+    </svg>`
+  ];
+
+  /* ==========================================================================
+     3. DỮ LIỆU 4 CHẶNG VÀ 12 CÂU HỎI TƯƠNG TÁC
+     ========================================================================== */
+  const STAGES = [
+    {
+      id: 1,
+      name: "Chặng 1: Khởi Hành & Phân Vai",
+      story: "Chặng 1 mở ra tại không gian lớp học quen thuộc, nơi các nhóm bắt đầu chuẩn bị cho buổi thảo luận về một vấn đề trong đời sống. Tại đây, các thành viên cùng xác định mục đích thảo luận là tạo sự đồng thuận, hiểu đúng bản chất vấn đề và xác định đối tượng người nghe, đồng thời phân công rõ bốn vai trò cốt lõi gồm Người điều hành, Thư kí, Diễn giả và Kĩ thuật viên số để phối hợp nhịp nhàng ngay từ những bước đầu."
+    },
+    {
+      id: 2,
+      name: "Chặng 2: Lắng Nghe & Chuẩn Bị Dẫn Chứng",
+      story: "Rời khỏi bàn khởi động, hành trình đưa người chơi đến không gian rừng ngập mặn giàu tính trải nghiệm để rèn nếp lắng nghe và chuẩn bị dẫn chứng thuyết phục. Ở chặng này, người nói thực hành nhắc lại và tóm tắt ý cốt lõi của người phát biểu trước rồi mới nêu quan điểm đồng tình hoặc phản bác, đồng thời nắm vững cách xây dựng sản phẩm truyền thông minh họa như infographic hoặc clip 45 giây và ghi nhớ 4 tiêu chí đánh giá để tự đánh giá, đánh giá chéo đúng trọng tâm."
+    },
+    {
+      id: 3,
+      name: "Chặng 3: Công Dân Số & Văn Hóa Mạng",
+      story: "Tiếp nối sang khung cảnh vùng biển nắng gió gợi nhắc thực tiễn địa phương, Chặng 3 tập trung vào năng lực làm việc trên không gian số và giữ gìn văn hóa mạng (Netiquette). Người tham gia rèn cách phản biện lịch sự, không dùng teencode, bắt đầu bằng lời tôn trọng khi trao đổi trên Padlet, đồng thời tuân thủ nguyên tắc trung thực, ghi rõ nguồn khi trích dẫn số liệu, hình ảnh và kiểm chứng thông tin, nêu rõ phần nội dung do công cụ AI hỗ trợ."
+    },
+    {
+      id: 4,
+      name: "Chặng 4: Bản Lĩnh Đối Thoại & Lan Tỏa",
+      story: "Chặng cuối đưa các nhóm bước lên sân khấu đối thoại trước cộng đồng để vận dụng toàn bộ kĩ năng thảo luận và phản biện vào các vấn đề thực tiễn như trách nhiệm của học sinh với trật tự an toàn giao thông. Tại trạm đích này, học sinh thể hiện bản lĩnh phản biện trên tinh thần tôn trọng, xây dựng và không công kích cá nhân, biết điều chỉnh cách trình bày thuyết phục và lan tỏa những ý kiến tích cực, có trách nhiệm đến người nghe."
+    }
+  ];
+
+  const QUESTIONS = [
+    // CHẶNG 1 (Câu 1 - 3)
+    {
+      stageIndex: 0,
+      q: "Quy trình một buổi thảo luận nhóm gồm những giai đoạn nào?",
+      options: [
+        "Chuẩn bị – Trình bày",
+        "Trước khi thảo luận – Trong khi thảo luận – Sau khi thảo luận",
+        "Khởi động – Luyện tập – Vận dụng – Lan tỏa",
+        "Mở đầu – Thân bài – Kết luận"
+      ],
+      answer: 1,
+      explain: "Đáp án B: Quy trình thảo luận nhóm gồm 3 giai đoạn: Trước khi thảo luận – Trong khi thảo luận – Sau khi thảo luận."
+    },
+    {
+      stageIndex: 0,
+      q: "Mục đích của buổi thảo luận về một vấn đề trong đời sống là gì?",
+      options: [
+        "Giành chiến thắng trước nhóm khác",
+        "Chứng tỏ ý kiến của mình là đúng nhất",
+        "Tạo sự đồng thuận, giúp mọi người hiểu đúng bản chất vấn đề",
+        "Kể lại thật đầy đủ các sự việc đã xảy ra"
+      ],
+      answer: 2,
+      explain: "Đáp án C: Thảo luận nhằm tạo sự đồng thuận, hiểu đúng bản chất vấn đề và xác định rõ đối tượng người nghe."
+    },
+    {
+      stageIndex: 0,
+      q: "Nhiệm vụ nào sau đây thuộc về Người điều hành?",
+      options: [
+        "Ghi biên bản và tổng hợp các nhóm ý kiến",
+        "Thiết kế infographic, clip 45 giây dẫn chứng",
+        "Chỉ trả lời câu hỏi của khán giả",
+        "Nêu đề tài, giữ nhịp thảo luận, kiểm soát thời gian, mời lần lượt các thành viên phát biểu"
+      ],
+      answer: 3,
+      explain: "Đáp án D: Người điều hành nêu đề tài, giữ nhịp thảo luận, kiểm soát thời gian và điều phối lượt phát biểu."
+    },
+
+    // CHẶNG 2 (Câu 4 - 6)
+    {
+      stageIndex: 1,
+      q: "Vì sao đề tài thảo luận cần 'phù hợp với lứa tuổi'?",
+      options: [
+        "Vì đề tài đó dễ, không cần chuẩn bị tài liệu",
+        "Vì đề tài thiết thực, gần gũi với đời sống học sinh nên các em có thể nói bằng hiểu biết và trải nghiệm của mình",
+        "Vì giáo viên bắt buộc phải chọn đề tài cho học sinh",
+        "Vì đề tài chỉ cần có một ý kiến duy nhất"
+      ],
+      answer: 1,
+      explain: "Đáp án B: Đề tài gần gũi giúp học sinh vận dụng được hiểu biết, trải nghiệm thực tế và đưa dẫn chứng thuyết phục."
+    },
+    {
+      stageIndex: 1,
+      q: "Khi phát biểu sau, người nói cần làm gì đối với ý kiến của người nói trước?",
+      options: [
+        "Bỏ qua và trình bày ý riêng của mình",
+        "Phản đối ngay để tạo sự sôi nổi",
+        "Nhắc lại, tóm tắt ý cốt lõi của người nói trước rồi mới nêu quan điểm đồng tình hoặc phản bác",
+        "Chờ Thư kí đọc lại biên bản rồi mới nói"
+      ],
+      answer: 2,
+      explain: "Đáp án C: Phải nhắc lại, tóm tắt ý cốt lõi của người nói trước rồi mới nêu quan điểm đồng tình hoặc phản bác."
+    },
+    {
+      stageIndex: 1,
+      q: "Tiêu chí nào sau đây KHÔNG thuộc 4 tiêu chí đánh giá buổi thảo luận trong bài?",
+      options: [
+        "Ý nghĩa của vấn đề thảo luận",
+        "Mức độ tập trung vào trọng tâm của lí lẽ, bằng chứng",
+        "Thái độ tôn trọng và tương tác giữa các thành viên",
+        "Số lượng slide có trong sản phẩm số"
+      ],
+      answer: 3,
+      explain: "Đáp án D: 4 tiêu chí đánh giá không tính số lượng slide mà đánh giá ý nghĩa vấn đề, lí lẽ/bằng chứng, thái độ tôn trọng và vai trò Người điều hành – Thư kí."
+    },
+
+    // CHẶNG 3 (Câu 7 - 9)
+    {
+      stageIndex: 2,
+      q: "Bạn Nam vừa nói: 'Rác thải biển ảnh hưởng đến sinh kế của người dân Cần Giờ – Vũng Tàu.' Em phát biểu tiếp theo, cách mở đầu nào đúng yêu cầu?",
+      options: [
+        "'Bạn Nam nói sai rồi, mình có ý kiến khác hoàn toàn.'",
+        "'Mình nhắc lại ý của bạn Nam: rác thải biển ảnh hưởng đến sinh kế người dân. Mình đồng tình và xin bổ sung…'",
+        "'Mình không nghe rõ bạn Nam nói gì, nên mình xin trình bày ý của mình.'",
+        "'Chủ đề này chán quá, mình xin nhường lượt.'"
+      ],
+      answer: 1,
+      explain: "Đáp án B: Tóm tắt đúng ý cốt lõi của bạn Nam một cách lịch sự trước khi bổ sung quan điểm mới."
+    },
+    {
+      stageIndex: 2,
+      q: "Nhóm em dùng công cụ AI để tạo ảnh minh họa cho infographic. Việc làm nào đúng với quy tắc văn hóa mạng (Netiquette)?",
+      options: [
+        "Đăng ngay, không cần ghi chú gì",
+        "Nhờ bạn khác trình bày thay mà không nói là dùng AI",
+        "Kiểm chứng thông tin, nêu rõ nội dung do AI hỗ trợ và trình bày bằng lời của mình",
+        "Lấy ảnh của người khác trên mạng, không cần ghi nguồn"
+      ],
+      answer: 2,
+      explain: "Đáp án C: Cần trung thực kiểm chứng thông tin, ghi rõ nguồn và nêu rõ phần nội dung do công cụ AI hỗ trợ."
+    },
+    {
+      stageIndex: 2,
+      q: "Trong lúc nhóm thảo luận, có ý kiến đồng tình và ý kiến mở rộng. Thư kí cần làm gì để đúng vai trò?",
+      options: [
+        "Chỉ ghi ý kiến của bạn nói đầu tiên",
+        "Tổng hợp, ghi chép các nhóm ý kiến đồng thuận và ý kiến mở rộng (trực tiếp trên Padlet)",
+        "Tham gia tranh luận thay cho diễn giả",
+        "Chỉ cần ghi tên các bạn đã phát biểu"
+      ],
+      answer: 1,
+      explain: "Đáp án B: Thư kí tổng hợp và phân loại rõ các nhóm ý kiến đồng thuận và ý kiến mở rộng trên Padlet."
+    },
+
+    // CHẶNG 4 (Câu 10 - 12)
+    {
+      stageIndex: 3,
+      q: "Một bạn khẳng định: 'Chuyện đất nước là việc của người lớn, học sinh chỉ cần học giỏi là đủ.' Cách phản biện nào văn minh, thuyết phục nhất?",
+      options: [
+        "'Bạn nói như vậy là ích kỉ, mình không muốn nghe nữa!'",
+        "'Mình rất thích phần trình bày của bạn, tuy nhiên mình muốn hỏi thêm: học sinh vùng biển Vũng Tàu có bị ảnh hưởng bởi rác thải biển không? Những việc nhỏ như nhặt rác, tuyên truyền sẽ lan tỏa thói quen tốt.'",
+        "Im lặng vì đó là ý kiến của bạn",
+        "Nói to hơn để bạn không thể tiếp tục phát biểu"
+      ],
+      answer: 1,
+      explain: "Đáp án B: Mở đầu tôn trọng người nói, đặt câu hỏi gợi mở gắn với thực tiễn địa phương và không công kích cá nhân."
+    },
+    {
+      stageIndex: 3,
+      q: "Phiên thảo luận bị nhận xét: sản phẩm số nhiều chữ, ít gắn nội dung; Người điều hành để quá thời gian 7 phút. Hướng cải tiến nào hợp lí nhất?",
+      options: [
+        "Giữ nguyên vì nhóm đã cố gắng",
+        "Thêm nhiều chữ và hiệu ứng vào infographic",
+        "Đổi sang đề tài khác hoàn toàn",
+        "Giảm chữ, trực quan hóa số liệu gắn với từng luận điểm; phân bổ thời gian hợp lí cho từng phần để vừa trong 7 phút"
+      ],
+      answer: 3,
+      explain: "Đáp án D: Trực quan hóa infographic/clip 45 giây gắn với luận điểm và kiểm soát tiến độ vừa vặn 7 phút."
+    },
+    {
+      stageIndex: 3,
+      q: "Nhóm 3 chuẩn bị phiên thảo luận về 'Trách nhiệm của học sinh với vấn đề trật tự an toàn giao thông'. Phương án chuẩn bị nào đầy đủ nhất?",
+      options: [
+        "Mỗi bạn tự nói theo ý mình, không cần phân công, không cần số liệu",
+        "Chỉ làm infographic đẹp, không cần kịch bản và ý kiến trái chiều",
+        "Xác định mục đích, thu thập số liệu và hình ảnh thật, phân công 4 vai trò, lập kịch bản (storyboard), dự kiến ý kiến trái chiều và cách phản hồi",
+        "Đọc nguyên văn một bài viết có sẵn, không cần tương tác với khán giả"
+      ],
+      answer: 2,
+      explain: "Đáp án C: Bao gồm đầy đủ các bước của giai đoạn 'Trước khi thảo luận' để buổi thảo luận thành công."
+    }
+  ];
+
+  /* ==========================================================================
+     4. TRẠNG THÁI TRÒ CHƠI & LƯU TRỮ BẢNG VINH DANH
+     ========================================================================== */
+  const QUESTION_TIME_LIMIT = 30; // 30 giây mỗi câu
+  let currentPlayerName = "";
+  let currentQuestionIdx = 0;
+  let scoreCount = 0;
+  let totalSecondsUsed = 0;
+  let questionRemainingTime = QUESTION_TIME_LIMIT;
+  let questionTimerInterval = null;
+  let questionStartTimestamp = 0;
+  let questionAnswered = false;
+  let resultsHistory = []; // Lưu kết quả từng câu: true/false
+  let leaderboard = [];    // Danh sách vinh danh các học sinh
+
+  // Khởi tạo giao diện ban đầu
+  window.onload = function () {
+    loadLeaderboardFromStorage();
+    renderStartPreviews();
+    setStageBackground(0);
+  };
+
+  function loadLeaderboardFromStorage() {
+    try {
+      const raw = localStorage.getItem('ban_linh_doi_thoai_rank_v1');
+      if (raw) leaderboard = JSON.parse(raw);
+    } catch (e) {
+      leaderboard = [];
+    }
+    updateSavedCountUI();
+  }
+
+  function saveLeaderboardToStorage() {
+    try {
+      localStorage.setItem('ban_linh_doi_thoai_rank_v1', JSON.stringify(leaderboard));
+    } catch (e) { /* Bỏ qua nếu trình duyệt chặn storage */ }
+    updateSavedCountUI();
+  }
+
+  function updateSavedCountUI() {
+    document.getElementById('saved-count').textContent = leaderboard.length;
+  }
+
+  function setStageBackground(stageIdx) {
+    const bgContainer = document.getElementById('stage-bg');
+    bgContainer.innerHTML = STAGE_BACKGROUNDS_SVG[stageIdx] || STAGE_BACKGROUNDS_SVG[0];
+  }
+
+  function renderStartPreviews() {
+    const container = document.getElementById('stages-preview-container');
+    container.innerHTML = STAGES.map((st, idx) => `
+      <div class="stage-mini-card">
+        <div class="stage-mini-icon">${STAGE_ICONS_SVG[idx]}</div>
+        <div class="stage-mini-title">${st.name}</div>
+      </div>
+    `).join('');
+  }
+
+  function switchScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+  }
+
+  /* ==========================================================================
+     5. LUỒNG CHƠI TỪNG HỌC SINH
+     ========================================================================== */
+  function startPlayerJourney() {
+    initAudio();
+    const input = document.getElementById('player-name-input');
+    const warn = document.getElementById('input-warning');
+    const name = input.value.trim();
+
+    if (!name) {
+      warn.textContent = "⚠️ Cô/em vui lòng nhập họ tên học sinh trước khi bắt đầu nhé!";
+      input.focus();
+      SFX.wrong();
+      return;
+    }
+
+    warn.textContent = "";
+    SFX.click();
+
+    currentPlayerName = name;
+    currentQuestionIdx = 0;
+    scoreCount = 0;
+    totalSecondsUsed = 0;
+    resultsHistory = new Array(QUESTIONS.length).fill(null);
+
+    showStageIntro(0);
+  }
+
+  function showStageIntro(stageIdx) {
+    setStageBackground(stageIdx);
+    SFX.stageUp();
+
+    const st = STAGES[stageIdx];
+    document.getElementById('intro-stage-tag').textContent = `CHẶNG ${st.id} / 4 • 3 CÂU HỎI`;
+    document.getElementById('intro-stage-icon').innerHTML = STAGE_ICONS_SVG[stageIdx];
+    document.getElementById('intro-stage-name').textContent = st.name;
+    document.getElementById('intro-stage-desc').textContent = st.story;
+
+    switchScreen('screen-stage-intro');
+  }
+
+  function beginStageQuestions() {
+    SFX.click();
+    switchScreen('screen-quiz');
+    renderQuestion();
+  }
+
+  function formatMinutesSeconds(totalSec) {
+    const rounded = Math.max(1, Math.round(totalSec));
+    const mins = Math.floor(rounded / 60);
+    const secs = rounded % 60;
+    const mStr = String(mins).padStart(2, '0');
+    const sStr = String(secs).padStart(2, '0');
+    return `${mStr} phút ${sStr} giây`;
+  }
+
+  function renderProgressDots() {
+    const wrap = document.getElementById('progress-steps');
+    wrap.innerHTML = QUESTIONS.map((_, idx) => {
+      let cls = 'step-dot';
+      if (idx === currentQuestionIdx) cls += ' current';
+      else if (resultsHistory[idx] === true) cls += ' done-correct';
+      else if (resultsHistory[idx] === false) cls += ' done-wrong';
+      return `<div class="${cls}">${idx + 1}</div>`;
+    }).join('');
+  }
+
+  function renderQuestion() {
+    clearInterval(questionTimerInterval);
+    questionAnswered = false;
+
+    const qObj = QUESTIONS[currentQuestionIdx];
+    const st = STAGES[qObj.stageIndex];
+    setStageBackground(qObj.stageIndex);
+
+    // Cập nhật thông tin đầu trang câu hỏi
+    document.getElementById('quiz-stage-icon').innerHTML = STAGE_ICONS_SVG[qObj.stageIndex];
+    document.getElementById('quiz-stage-label').textContent = st.name;
+    document.getElementById('quiz-player-name').textContent = currentPlayerName;
+    document.getElementById('quiz-score-now').textContent = scoreCount;
+    document.getElementById('question-number-label').textContent = `Câu ${currentQuestionIdx + 1} / ${QUESTIONS.length}`;
+    document.getElementById('total-elapsed-label').textContent = `Tổng thời gian: ${formatMinutesSeconds(totalSecondsUsed)}`;
+    document.getElementById('question-text').textContent = qObj.q;
+
+    renderProgressDots();
+
+    // Ẩn thanh giải thích
+    const fbBar = document.getElementById('feedback-bar');
+    fbBar.classList.remove('show');
+
+    // Tạo 4 nút lựa chọn A, B, C, D
+    const letters = ['A', 'B', 'C', 'D'];
+    const grid = document.getElementById('options-grid');
+    grid.innerHTML = qObj.options.map((optText, idx) => `
+      <button class="option-btn" id="opt-btn-${idx}" onclick="selectOption(${idx})">
+        <span class="option-letter">${letters[idx]}</span>
+        <span class="option-content">${optText}</span>
+      </button>
+    `).join('');
+
+    // Bắt đầu đồng hồ đếm ngược 30 giây
+    questionRemainingTime = QUESTION_TIME_LIMIT;
+    questionStartTimestamp = Date.now();
+    updateTimerUI();
+
+    questionTimerInterval = setInterval(() => {
+      const elapsedThisQ = (Date.now() - questionStartTimestamp) / 1000;
+      const remain = Math.max(0, QUESTION_TIME_LIMIT - elapsedThisQ);
+      const prevCeil = Math.ceil(questionRemainingTime);
+      const currCeil = Math.ceil(remain);
+      questionRemainingTime = remain;
+
+      if (currCeil !== prevCeil && currCeil > 0) {
+        if (currCeil <= 5) SFX.warnTick();
+        else SFX.tick();
+      }
+
+      updateTimerUI();
+
+      // Cập nhật tổng thời gian chạy thực tế
+      document.getElementById('total-elapsed-label').textContent =
+        `Tổng thời gian: ${formatMinutesSeconds(totalSecondsUsed + elapsedThisQ)}`;
+
+      if (remain <= 0) {
+        clearInterval(questionTimerInterval);
+        handleTimeOut();
+      }
+    }, 150);
+  }
+
+  function updateTimerUI() {
+    const secs = Math.ceil(questionRemainingTime);
+    const display = document.getElementById('timer-display');
+    const box = document.getElementById('timer-box');
+    display.textContent = `${secs}s`;
+    if (secs <= 7) box.classList.add('warning');
+    else box.classList.remove('warning');
+  }
+
+  function selectOption(chosenIdx) {
+    if (questionAnswered) return;
+    questionAnswered = true;
+    clearInterval(questionTimerInterval);
+
+    const elapsedThisQ = Math.min(QUESTION_TIME_LIMIT, (Date.now() - questionStartTimestamp) / 1000);
+    totalSecondsUsed += elapsedThisQ;
+
+    const qObj = QUESTIONS[currentQuestionIdx];
+    const isCorrect = (chosenIdx === qObj.answer);
+
+    // Khóa tất cả nút
+    for (let i = 0; i < 4; i++) {
+      const btn = document.getElementById(`opt-btn-${i}`);
+      btn.disabled = true;
+      if (i === qObj.answer) btn.classList.add('correct');
+      else if (i === chosenIdx && !isCorrect) btn.classList.add('wrong');
+    }
+
+    if (isCorrect) {
+      scoreCount++;
+      resultsHistory[currentQuestionIdx] = true;
+      SFX.correct();
+      document.getElementById('quiz-score-now').textContent = scoreCount;
+      document.getElementById('feedback-text').innerHTML = `✅ <strong style="color:#16a34a;">Chính xác!</strong> ${qObj.explain}`;
+    } else {
+      resultsHistory[currentQuestionIdx] = false;
+      SFX.wrong();
+      document.getElementById('feedback-text').innerHTML = `❌ <strong style="color:#dc2626;">Chưa đúng!</strong> ${qObj.explain}`;
+    }
+
+    renderProgressDots();
+    prepareNextButton();
+  }
+
+  function handleTimeOut() {
+    if (questionAnswered) return;
+    questionAnswered = true;
+    totalSecondsUsed += QUESTION_TIME_LIMIT;
+
+    const qObj = QUESTIONS[currentQuestionIdx];
+    resultsHistory[currentQuestionIdx] = false;
+    SFX.wrong();
+
+    for (let i = 0; i < 4; i++) {
+      const btn = document.getElementById(`opt-btn-${i}`);
+      btn.disabled = true;
+      if (i === qObj.answer) btn.classList.add('correct');
+    }
+
+    document.getElementById('feedback-text').innerHTML = `⏰ <strong style="color:#dc2626;">Hết 30 giây!</strong> ${qObj.explain}`;
+    renderProgressDots();
+    prepareNextButton();
+  }
+
+  function prepareNextButton() {
+    const nextBtn = document.getElementById('btn-next-q');
+    if (currentQuestionIdx === QUESTIONS.length - 1) {
+      nextBtn.textContent = "🏆 Xem Vinh Danh";
+    } else if ((currentQuestionIdx + 1) % 3 === 0) {
+      const nextStageNum = Math.floor((currentQuestionIdx + 1) / 3) + 1;
+      nextBtn.textContent = `Sang Chặng ${nextStageNum} ➔`;
+    } else {
+      nextBtn.textContent = "Câu tiếp theo ➔";
+    }
+    document.getElementById('feedback-bar').classList.add('show');
+  }
+
+  function nextStep() {
+    SFX.click();
+    currentQuestionIdx++;
+
+    if (currentQuestionIdx >= QUESTIONS.length) {
+      finishPlayerJourney();
+      return;
+    }
+
+    // Nếu sang đầu chặng mới (câu 4, câu 7, câu 10 -> index 3, 6, 9)
+    if (currentQuestionIdx % 3 === 0) {
+      const nextStageIdx = Math.floor(currentQuestionIdx / 3);
+      showStageIntro(nextStageIdx);
+    } else {
+      renderQuestion();
+    }
+  }
+
+  /* ==========================================================================
+     6. HOÀN THÀNH & BẢNG VÀNG VINH DANH (XẾP HẠNG 1, 2, 3...)
+     ========================================================================== */
+  function finishPlayerJourney() {
+    SFX.victory();
+    setStageBackground(3);
+
+    const finalSeconds = Math.max(1, Math.round(totalSecondsUsed));
+    const newRecord = {
+      id: Date.now(),
+      name: currentPlayerName,
+      score: scoreCount,
+      totalQuestions: QUESTIONS.length,
+      seconds: finalSeconds
+    };
+
+    leaderboard.push(newRecord);
+    sortLeaderboard();
+    saveLeaderboardToStorage();
+
+    // Hiển thị thông báo kết quả cá nhân vừa chơi
+    const banner = document.getElementById('current-result-banner');
+    banner.style.display = 'flex';
+    const rankPos = leaderboard.findIndex(item => item.id === newRecord.id) + 1;
+    document.getElementById('finish-headline').textContent =
+      `🎉 CHÚC MỪNG ${currentPlayerName.toUpperCase()} (HẠNG ${rankPos})!`;
+    document.getElementById('finish-stats').textContent =
+      `Đúng: ${scoreCount}/${QUESTIONS.length} câu • Tổng thời gian: ${formatMinutesSeconds(finalSeconds)}`;
+
+    renderLeaderboardTable(newRecord.id);
+    switchScreen('screen-result');
+  }
+
+  // Sắp xếp ưu tiên: 1. Số câu đúng cao hơn -> 2. Tổng số giây (phút chơi) ít hơn
+  function sortLeaderboard() {
+    leaderboard.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.seconds - b.seconds;
+    });
+  }
+
+  function renderLeaderboardTable(highlightId = null) {
+    const tbody = document.getElementById('leaderboard-body');
+    if (leaderboard.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align:center; padding: 32px; color: #64748b;">
+            Chưa có học sinh nào hoàn thành lượt chơi. Hãy bấm "Lượt học sinh tiếp theo" để bắt đầu!
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = leaderboard.map((item, idx) => {
+      const rank = idx + 1;
+      let rowCls = '';
+      let badgeCls = 'rank-other';
+      let medal = `#${rank}`;
+
+      if (rank === 1) { rowCls = 'top-1'; badgeCls = 'rank-1'; medal = '🥇 1'; }
+      else if (rank === 2) { rowCls = 'top-2'; badgeCls = 'rank-2'; medal = '🥈 2'; }
+      else if (rank === 3) { rowCls = 'top-3'; badgeCls = 'rank-3'; medal = '🥉 3'; }
+
+      const isCurrent = (item.id === highlightId);
+      const nameTag = isCurrent ? `${escapeHtml(item.name)} <span style="color:#2563eb;">(Vừa chơi)</span>` : escapeHtml(item.name);
+
+      return `
+        <tr class="${rowCls}">
+          <td><span class="rank-badge ${badgeCls}">${medal}</span></td>
+          <td>${nameTag}</td>
+          <td style="color:#16a34a;">${item.score} / ${item.totalQuestions} câu</td>
+          <td style="color:#1e3a8a;">${formatMinutesSeconds(item.seconds)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
+  }
+
+  function openLeaderboardOnly() {
+    SFX.click();
+    clearInterval(questionTimerInterval);
+    document.getElementById('current-result-banner').style.display = 'none';
+    sortLeaderboard();
+    renderLeaderboardTable(null);
+    switchScreen('screen-result');
+  }
+
+  function nextStudentTurn() {
+    SFX.click();
+    clearInterval(questionTimerInterval);
+    document.getElementById('player-name-input').value = '';
+    document.getElementById('input-warning').textContent = '';
+    setStageBackground(0);
+    switchScreen('screen-start');
+    setTimeout(() => document.getElementById('player-name-input').focus(), 100);
+  }
+
+  /* ==========================================================================
+     7. CHỨC NĂNG TOÀN MÀN HÌNH & CHƠI LẠI
+     ========================================================================== */
+  function toggleFullScreen() {
+    SFX.click();
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  function askRestart() {
+    SFX.click();
+    openModal(
+      "🔄 Quay về màn hình bắt đầu?",
+      "Lượt chơi hiện tại sẽ dừng lại để nhập tên học sinh khác (Bảng vàng vinh danh vẫn được giữ nguyên).",
+      () => {
+        closeModal();
+        nextStudentTurn();
+      }
+    );
+  }
+
+  function askClearLeaderboard() {
+    SFX.click();
+    openModal(
+      "🗑️ Xóa toàn bộ bảng vinh danh?",
+      "Tất cả kết quả xếp hạng 1, 2, 3... hiện tại sẽ được xóa sạch để bắt đầu tiết học mới.",
+      () => {
+        leaderboard = [];
+        saveLeaderboardToStorage();
+        closeModal();
+        nextStudentTurn();
+      }
+    );
+  }
+
+  function openModal(title, msg, onConfirm) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-message').textContent = msg;
+    const btn = document.getElementById('modal-confirm-btn');
+    btn.onclick = onConfirm;
+    document.getElementById('custom-modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('custom-modal').classList.remove('open');
+  }
+
+  // Cho phép nhấn phím Enter ở ô nhập tên để bắt đầu nhanh
+  document.getElementById('player-name-input').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') startPlayerJourney();
+  });
+</script>
+</body>
+</html>
